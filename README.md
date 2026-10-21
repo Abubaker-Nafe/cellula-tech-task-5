@@ -1,22 +1,26 @@
-# Voice-Based Data Analysis API
+# Voice Data Analyst
 
-Ask questions about a CSV dataset in **English or Arabic**, using text or a voice recording. The API transcribes speech, generates a SQLite query, validates and executes it, and returns the results with an explanation.
+Analyze a CSV dataset in **English or Arabic** through a local browser interface. Type a question, upload an audio file, or record a question with your microphone. The FastAPI backend transcribes speech, generates a SQLite query, validates and executes it, and returns the results with an explanation.
 
 **Author:** Nafe Abubaker  
 **Project:** Cellula Technologies — Week 5 / Task 5
 
+**Run mode:** Local application, with the frontend and API served by the same FastAPI process.
+
 ## Overview
 
-This project implements the voice-based data analysis workflow for Project 2, Part 2 using FastAPI. A user uploads a CSV, receives a dataset ID, and asks questions about that dataset through the API.
+This project implements the voice-based data analysis workflow for Project 2, Part 2 using a FastAPI backend and an HTML, CSS, and JavaScript frontend. A user uploads a CSV, receives a dataset ID, and asks questions about that dataset through the browser interface or directly through the API.
 
 The LLM generates SQL and explains returned results. **Python's built-in `sqlite3` executes the query and calculates the results.** Faster-Whisper transcribes audio locally.
 
 | Capability | Implementation |
 | --- | --- |
+| Browser interface | Dataset sidebar, text/voice controls, an analysis thread, and result tables |
 | Dataset upload | UTF-8 CSV import, inferred column types, and a five-row preview |
 | Dataset storage | A separate SQLite database for each upload |
+| Saved datasets | Copy a dataset ID and load it again while its database file remains available |
 | Text analysis | English and Arabic questions converted into SQL |
-| Voice analysis | Audio transcription followed by the same analysis workflow |
+| Voice analysis | Audio-file upload or microphone recording, with playback before analysis |
 | Query controls | SQLGlot validation, read-only SQLite connections, and an authorizer |
 | Result explanation | A short explanation based on the executed query and returned rows |
 | Unsupported requests | A `cannot_answer` response when the model identifies an unrelated or unsupported question |
@@ -27,7 +31,7 @@ The LLM generates SQL and explains returned results. **Python's built-in `sqlite
 ```mermaid
 flowchart TD
     CSV["Upload CSV"] --> DB[("SQLite dataset")]
-    Audio["English or Arabic audio"] --> Speech["Faster-Whisper transcription"]
+    Audio["Record or upload English or Arabic audio"] --> Speech["Faster-Whisper transcription"]
     Speech --> SQL["LLM generates SQL"]
     Text["Typed question"] --> SQL
     DB -->|"Schema and five-row preview"| SQL
@@ -44,6 +48,7 @@ The preview helps the model interpret column values. Calculations run against th
 
 | Component | Technology | Purpose |
 | --- | --- | --- |
+| Frontend | HTML, CSS, and vanilla JavaScript | Dataset controls, microphone recording, API requests, and result display |
 | API | FastAPI and Uvicorn | Request handling, validation, and API documentation |
 | CSV processing | pandas | Read CSV files and create the SQLite table |
 | Speech recognition | Faster-Whisper with CTranslate2 | Transcribe English and Arabic audio |
@@ -98,7 +103,7 @@ WHISPER_MODEL=small
 
 The speech model runs on the CPU with `int8` computation. Its first use downloads model files into `data/models/whisper/`; later runs reuse those files. Internet access is needed for that initial download and for OpenRouter requests. Restart the API after changing `.env`.
 
-### 4. Start the API
+### 4. Start the application
 
 ```bat
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
@@ -106,10 +111,55 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 | Address | Purpose |
 | --- | --- |
+| [http://127.0.0.1:8000/](http://127.0.0.1:8000/) | Browser interface |
 | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) | Interactive Swagger UI |
 | [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) | API health check |
 
-The health endpoint returns `{"status": "ok"}`. It checks that the API responds; it does not test OpenRouter or load the speech model. The root URL `/` has no homepage and returns `404`.
+Open the homepage through the running server. The same Uvicorn command serves the frontend and API; the frontend does not require a separate build or server.
+
+`main.py` connects the browser interface through this import and initialization call:
+
+```python
+from frontend_routes import install_frontend
+
+# After creating app and including the audio router:
+install_frontend(app)
+```
+
+The `frontend/` folder must be beside `frontend_routes.py` and `main.py`. Open the page at the localhost address rather than opening `index.html` directly.
+
+The health endpoint returns `{"status": "ok"}`. It checks that the API responds; it does not test OpenRouter or load the speech model.
+
+## Use the browser interface
+
+### Upload or load a dataset
+
+1. Open the homepage and check that the top-right indicator says **API connected**.
+2. Choose a CSV in the sidebar and click **Upload dataset**. You can use the [sample CSV below](#upload-a-dataset).
+3. Check the row count, column count, and **Dataset preview**. The preview includes column types and up to five rows.
+4. Use **Copy ID** to keep the dataset ID. To reopen it later, expand **Load a saved dataset**, paste the ID, and click **Load dataset**.
+
+### Ask a text question
+
+Choose **Type a question**, enter a complete question about the selected dataset, and click **Analyze**. English and Arabic are supported. **Ctrl + Enter** also submits the question.
+
+The analysis thread displays the answer, a result table, and an expandable **View executed SQL** section. Unsupported questions display the backend's message instead of a query result.
+
+### Ask a voice question
+
+1. Choose **Use your voice**.
+2. Select **English**, **Arabic**, or automatic language detection. The browser interface initially selects English.
+3. Click **Record a question**, speak, and click **Stop recording**; alternatively, use the single **Choose an audio file** button.
+4. Listen to the audio preview if needed, then click **Analyze recording**.
+5. The preview and selected clip clear immediately. The captured audio is still sent to the API, and its transcript and analysis appear in the chat.
+
+Browser recordings stop automatically at **55 seconds** to leave room under the API's 60-second limit. Microphone recording requires browser permission and a secure context, such as localhost or HTTPS. Audio-file upload is also available when browser recording is unavailable.
+
+### Session behavior
+
+The current tab remembers the active dataset ID in session storage and attempts to reload that dataset after a page refresh. Questions and results stay in page memory and disappear when the page reloads or **Clear results** is clicked. Clearing results does not delete the stored dataset.
+
+Each question is analyzed independently. The visible analysis thread does not add conversation memory to the backend. Switching datasets clears the displayed analysis history.
 
 ## Upload a dataset
 
@@ -125,7 +175,7 @@ order_id,city,product,quantity,unit_price
 6,Hebron,Keyboard,1,50
 ```
 
-In Swagger UI:
+To upload directly through Swagger UI:
 
 1. Expand **POST `/datasets`** and click **Try it out**.
 2. Select the CSV in the `file` field and click **Execute**.
@@ -212,11 +262,13 @@ The response includes the analysis fields shown above plus a nested `transcripti
 }
 ```
 
-The duration and transcript depend on the recording. To transcribe without running analysis, use **POST `/transcribe`**, supplying only `file` and the optional `language` form field. This endpoint does not require a dataset ID.
+The duration and transcript depend on the recording. To transcribe without running analysis, use **POST `/transcribe`**, supplying only `file` and the optional `language` form field. This endpoint does not require a dataset ID. The browser's **Analyze recording** action uses `/analyze/audio` to perform the complete pipeline.
 
 Supported filename extensions are `.wav`, `.mp3`, `.m4a`, `.ogg`, `.flac`, `.webm`, `.aac`, and `.opus`. Files must also decode as valid audio. Uploaded recordings are processed through temporary files that are removed after transcription.
 
 ## API reference
+
+The homepage is served at **GET `/`**, and frontend assets are served under `/assets/`. These interface routes are separate from the eight analysis API endpoints below. The homepage route is excluded from Swagger UI.
 
 | Method | Endpoint | Input | Purpose |
 | --- | --- | --- | --- |
@@ -297,6 +349,8 @@ The execution layer rejects modification commands such as `DROP`, `DELETE`, and 
 | Uploaded dataset | Local `data/datasets/<dataset_id>.sqlite3` |
 | Downloaded speech model | Local `data/models/whisper/` |
 | Audio transcription | Local CPU; API audio copies are temporary |
+| Active dataset ID in the browser | Session storage for the current tab |
+| Browser questions and results | Page memory; cleared on reload, dataset switch, or Clear results |
 | SQL generation context | Question, table name, column names/types, total row count, and up to five sample rows sent to OpenRouter |
 | Explanation context | Question, executed SQL, returned columns/rows, row count, and truncation flag sent to OpenRouter |
 
@@ -308,7 +362,7 @@ Dataset IDs identify stored databases and remain usable while those files exist.
 
 | File | Responsibility |
 | --- | --- |
-| `main.py` | Creates the FastAPI app, defines dataset/text/SQL routes, and includes the audio router |
+| `main.py` | Creates the FastAPI app, defines dataset/text/SQL routes, includes the audio router, and installs the frontend |
 | `dataset_store.py` | Validates CSV uploads, creates dataset databases, and reads schema and preview information |
 | `llm_client.py` | Loads OpenRouter settings, sends model requests, and handles provider/response errors |
 | `sql_generator.py` | Builds dataset-aware English/Arabic prompts and returns SQL or `cannot_answer` |
@@ -316,6 +370,10 @@ Dataset IDs identify stored databases and remain usable while those files exist.
 | `analysis_service.py` | Connects generation, execution, and result explanation; preserves results if explanation fails |
 | `speech_to_text.py` | Loads the speech model, transcribes recordings, and provides a transcription CLI |
 | `audio_routes.py` | Handles audio form uploads, temporary files, transcription, and voice analysis |
+| `frontend_routes.py` | Serves the homepage and mounts the frontend assets under `/assets/` |
+| `frontend/index.html` | Defines the dataset sidebar, question controls, audio preview, and analysis thread |
+| `frontend/styles.css` | Styles the interface, result tables, and responsive layouts |
+| `frontend/app.js` | Calls the API, manages the active dataset and displayed results, records audio, and clears submitted audio previews |
 | `requirements.txt` | Pins package versions from the tested environment |
 | `.env` | Stores local model configuration and the API key |
 | `.gitignore` | Excludes local credentials, virtual environments, caches, and generated data from new Git tracking |
@@ -344,11 +402,17 @@ The following checks were completed manually during development:
 
 For the sample CSV, ask “How many orders are in the dataset, and what is the total sales value across all cities?” to reproduce the six-order, 2110-total check. These checks document tested cases rather than a guarantee for every dataset or phrasing.
 
+The browser interface was also reviewed locally. Separate development checks covered Python and JavaScript syntax, frontend asset serving, DOM references, and API integration using mocked LLM and speech responses. Audio-submission checks verified that uploaded and recorded file payloads remain intact while the preview clears before the pending request completes, including the request-failure path.
+
 ## Troubleshooting
 
 | Issue | What to check |
 | --- | --- |
-| `/` returns `404` | Use `/docs` or `/health`; no root homepage is defined |
+| `/` returns `404` | Check that `main.py` imports `install_frontend` and calls `install_frontend(app)`; restart the server |
+| Frontend assets cannot be found | Keep the complete `frontend/` folder beside `frontend_routes.py` and `main.py` |
+| Browser shows old controls | Save the updated frontend files and hard-refresh with Ctrl + F5 |
+| API unavailable in the interface | Confirm Uvicorn is running, open the homepage through its localhost URL, and check `/health` |
+| Microphone cannot start | Use the localhost page, allow microphone permission, or choose an audio file |
 | Dataset not found | Use the ID from your own upload and confirm its SQLite file still exists |
 | First transcription takes longer | The speech model may still be downloading or loading; inspect the API terminal |
 | Windows Hugging Face symlink warning | The model can still download and run; the cache may use more disk space |
@@ -376,3 +440,5 @@ Keep `.env`, `.venv/`, `__pycache__/`, and `data/` in `.gitignore`. The download
 - [OpenRouter — quickstart](https://openrouter.ai/docs/quickstart)
 - [Python 3.11 — sqlite3](https://docs.python.org/3.11/library/sqlite3.html)
 - [SQLGlot — documentation](https://sqlglot.com/sqlglot.html)
+- [FastAPI — serving static files](https://fastapi.tiangolo.com/tutorial/static-files/)
+- [MDN — microphone access with getUserMedia](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)

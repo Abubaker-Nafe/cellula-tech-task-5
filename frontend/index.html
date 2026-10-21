@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#162b39">
+  <title>Voice Data Analyst</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23162b39'/%3E%3Cpath d='M11 21v5m6-13v19m6-23v23m6-16v10' stroke='%2379e3c1' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/styles.css?v=1">
+  <script defer src="/assets/app.js?v=2"></script>
+</head>
+<body>
+  <a class="skip-link" href="#question">Skip to question</a>
+  <aside class="sidebar" aria-label="Dataset workspace">
+    <a class="brand" href="/" aria-label="Voice Data Analyst home">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M6 16v6m6-13v19m7-24v24m7-17v12"/></svg></span>
+      <span>Voice Data<span class="brand-subtitle">ANALYST</span></span>
+    </a>
+    <p class="sidebar-intro">Your dataset. Your questions.<br>Answers you can inspect.</p>
+
+    <section class="side-section">
+      <p class="eyebrow">01 / DATA SOURCE</p>
+      <h2>Add your dataset</h2>
+      <form id="upload-form">
+        <label class="upload-zone" for="csv-file">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4M4 15v5h16v-5"/></svg>
+          <strong>Choose a CSV file</strong>
+          <span id="csv-name">UTF-8 · up to 10 MiB</span>
+        </label>
+        <input id="csv-file" class="file-input" type="file" accept=".csv,text/csv" data-lock>
+        <button class="button button-mint full-width" id="upload-button" type="submit" data-lock>Upload dataset <span aria-hidden="true">↗</span></button>
+      </form>
+
+      <details class="load-details">
+        <summary>Load a saved dataset</summary>
+        <form id="load-form">
+          <label for="dataset-id">Dataset ID</label>
+          <input id="dataset-id" type="text" placeholder="Paste the 32-character ID" maxlength="32" spellcheck="false" autocomplete="off" data-lock>
+          <button class="button button-outline full-width" type="submit" data-lock>Load dataset</button>
+        </form>
+      </details>
+    </section>
+
+    <section id="dataset-card" class="dataset-card" hidden aria-label="Active dataset">
+      <div class="dataset-title"><span class="status-dot"></span><strong id="dataset-name">Dataset ready</strong></div>
+      <div class="dataset-stats"><div><strong id="dataset-rows">0</strong><span>rows</span></div><div><strong id="dataset-columns">0</strong><span>columns</span></div></div>
+      <label for="active-id">SAVED DATASET ID</label>
+      <input id="active-id" class="active-id" readonly aria-label="Active dataset ID">
+      <button id="copy-id" class="text-button" type="button">Copy ID</button>
+    </section>
+
+    <div class="sidebar-footer">
+      <span class="project-tag">CELLULA / WEEK 05</span>
+      <p>Built by Nafe Abubaker</p>
+      <a href="/docs" target="_blank" rel="noopener">Explore the API <span aria-hidden="true">↗</span></a>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <header class="topbar">
+      <div><span class="breadcrumb">WORKSPACE</span><span class="topbar-divider">/</span><span>Data analysis</span></div>
+      <button id="api-status" class="api-status" type="button" title="Check API connection"><span class="status-dot"></span><span id="api-status-text">Connecting…</span></button>
+    </header>
+
+    <div class="content">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+      <section class="page-heading">
+        <p class="eyebrow">FROM QUESTIONS TO INSIGHT</p>
+        <h1>Let your data do the talking.</h1>
+        <p>Upload a dataset, then ask in English or Arabic.<br class="desktop-break"> Type a question or use your voice.</p>
+        <div class="capability-tags"><span><i class="tiny-dot"></i> English &amp; Arabic</span><span>Text &amp; voice</span><span>Results from your data</span></div>
+      </section>
+
+      <details id="dataset-preview" class="preview-card" hidden>
+        <summary><span><span class="preview-icon" aria-hidden="true">▦</span> Dataset preview</span><span class="muted">First 5 rows</span></summary>
+        <div id="preview-content" class="preview-content"></div>
+        <p class="preview-footnote">The preview shows up to five rows. Analysis queries the full uploaded table.</p>
+      </details>
+
+      <section id="empty-state" class="empty-state" aria-label="Getting started">
+        <div class="wave-illustration" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <h2>A question is all it takes.</h2>
+        <p id="empty-hint">Start by uploading a CSV in the sidebar.<br>Your answers, tables, and queries will appear here.</p>
+        <div class="example-grid">
+          <button type="button" class="example-card" data-question="What is the total sales value for each city?" data-lock><span class="example-label">COMPARE</span><span>Total sales for each city</span><span class="example-arrow" aria-hidden="true">↗</span></button>
+          <button type="button" class="example-card" data-question="How many rows are in this dataset?" data-lock><span class="example-label">SUMMARIZE</span><span>How many records are there?</span><span class="example-arrow" aria-hidden="true">↗</span></button>
+          <button type="button" class="example-card" data-question="ما إجمالي قيمة المبيعات لكل مدينة؟" data-lock><span class="example-label">ASK IN ARABIC</span><span dir="rtl" lang="ar">إجمالي المبيعات لكل مدينة</span><span class="example-arrow" aria-hidden="true">↗</span></button>
+        </div>
+        <p class="example-note">The sales examples use the sample sales dataset.</p>
+      </section>
+
+      <section class="analysis-thread" aria-label="Analysis history">
+        <div id="thread-toolbar" class="thread-toolbar" hidden><span>THIS SESSION</span><button id="clear-history" type="button" class="text-button" data-lock>Clear results</button></div>
+        <div id="messages" aria-busy="false"></div>
+      </section>
+    </div>
+
+    <div class="composer-wrap">
+      <section class="composer" aria-label="Ask a question">
+        <div class="composer-header">
+          <div class="mode-tabs" role="tablist" aria-label="Question input method">
+            <button id="text-tab" class="mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="text-panel" data-lock>Type a question</button>
+            <button id="voice-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="voice-panel" tabindex="-1" data-lock>Use your voice</button>
+          </div>
+          <span id="composer-dataset" class="composer-dataset">No dataset selected</span>
+        </div>
+        <div id="text-panel" role="tabpanel" aria-labelledby="text-tab">
+          <form id="question-form" class="question-form">
+            <label class="sr-only" for="question">Your question</label>
+            <textarea id="question" rows="2" maxlength="2000" dir="auto" placeholder="Ask a question about your dataset…" disabled data-lock></textarea>
+            <button id="send-button" class="button button-primary" type="submit" disabled>Analyze <span aria-hidden="true">↑</span></button>
+          </form>
+        </div>
+        <div id="voice-panel" role="tabpanel" aria-labelledby="voice-tab" hidden>
+          <div class="voice-topline">
+            <label for="audio-language">Recording language</label>
+            <select id="audio-language" data-lock><option value="en">English</option><option value="ar">العربية / Arabic</option><option value="auto">Detect automatically</option></select>
+          </div>
+          <div class="voice-actions">
+            <button id="record-button" class="button button-soft" type="button" disabled><span class="record-dot" aria-hidden="true"></span><span id="record-label">Record a question</span></button>
+            <span class="muted">or</span>
+            <button id="choose-audio" class="button button-soft" type="button" data-lock>Choose an audio file</button>
+            <input id="audio-file" type="file" accept=".wav,.mp3,.m4a,.ogg,.flac,.webm,.aac,.opus" hidden data-lock>
+          </div>
+          <p id="audio-hint" class="audio-hint" aria-live="polite">Up to 60 seconds · 10 MiB. You can review the recording before analysis.</p>
+          <div id="audio-review" class="audio-review" hidden>
+            <div class="audio-review-header"><span id="audio-name"></span><button id="discard-audio" class="text-button" type="button" data-lock>Remove</button></div>
+            <audio id="audio-player" controls preload="metadata"></audio>
+          </div>
+          <button id="analyze-audio" class="button button-primary voice-submit" type="button" disabled>Analyze recording <span aria-hidden="true">↑</span></button>
+        </div>
+      </section>
+      <p class="composer-note" id="composer-note">Each question is analyzed independently. Results stay in this tab until you reload or clear them.</p>
+    </div>
+  </main>
+</body>
+</html>

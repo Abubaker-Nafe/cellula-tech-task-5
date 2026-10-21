@@ -1,3 +1,4 @@
+from frontend_routes import install_frontend
 from pydantic import BaseModel, Field
 from llm_client import LLMError
 from sql_executor import execute_sql
@@ -17,6 +18,7 @@ app = FastAPI(
 )
 
 app.include_router(audio_router)
+install_frontend(app)
 
 @app.get("/health")
 def health_check():
